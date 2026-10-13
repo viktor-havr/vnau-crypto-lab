@@ -1,0 +1,1155 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Криптолабораторія</title>
+<meta name="description" content="Інтерактивна лабораторна: AES, S-AES, ChaCha20 і режими роботи блокових шифрів крок за кроком">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef1ea; --surface:#fbfcf8; --surface2:#e3e8dc; --text:#14261c; --muted:#56665a; --border:#cdd6c5;
+  --accent:#2f6b3f; --accent-soft:#d9eadb; --on-accent:#ffffff;
+  --rape:#e3b505; --rape-soft:#faefc0; --soil:#3b2e22; --sky:#4a7fa7;
+  --ok:#2f6b3f; --ok-soft:#d6ead7; --bad:#b42335; --bad-soft:#f7dde0; --warn:#866000; --warn-soft:#f6eac0;
+  --k-const:#e6ddd0; --k-key:#d3e8d2; --k-ctr:#f4e3a0; --k-nonce:#d3e2ee;
+  --display:"Unbounded","Onest",system-ui,sans-serif;
+  --body:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1712; --surface:#16211a; --surface2:#203026; --text:#e3eadc; --muted:#9db0a0; --border:#2d3e32;
+    --accent:#8fcf98; --accent-soft:#1f3a27; --on-accent:#0f1712;
+    --rape:#f0c93a; --rape-soft:#3a3214; --soil:#0a0f0b; --sky:#86b3d6;
+    --ok:#8fcf98; --ok-soft:#1d3825; --bad:#ff8f8f; --bad-soft:#47201f; --warn:#f0c96b; --warn-soft:#3c3218;
+    --k-const:#3a3127; --k-key:#22392a; --k-ctr:#41381a; --k-nonce:#203548;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1712; --surface:#16211a; --surface2:#203026; --text:#e3eadc; --muted:#9db0a0; --border:#2d3e32;
+  --accent:#8fcf98; --accent-soft:#1f3a27; --on-accent:#0f1712;
+  --rape:#f0c93a; --rape-soft:#3a3214; --soil:#0a0f0b; --sky:#86b3d6;
+  --ok:#8fcf98; --ok-soft:#1d3825; --bad:#ff8f8f; --bad-soft:#47201f; --warn:#f0c96b; --warn-soft:#3c3218;
+  --k-const:#3a3127; --k-key:#22392a; --k-ctr:#41381a; --k-nonce:#203548;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:16.5px/1.6 var(--body)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+code,.mono,.cell,.tbl{font-family:var(--mono)}
+code{background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:.86em}
+h1,h2{font-family:var(--display);font-weight:700;letter-spacing:-.015em;line-height:1.15}
+h2{margin:36px 0 10px;font-size:clamp(1.4rem,3.2vw,1.85rem);font-weight:500}
+h3{margin:0;font-size:1.06rem;font-weight:600;line-height:1.3}
+p{margin:8px 0}
+a{color:var(--accent)}
+.muted{color:var(--muted)}
+:focus-visible{outline:3px solid var(--rape);outline-offset:2px}
+
+/* ---------- hero ---------- */
+header{background:var(--surface);border-bottom:1px solid var(--border)}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,470px);gap:28px 52px;align-items:center;padding-top:40px;padding-bottom:30px}
+@media (max-width:880px){.hero{grid-template-columns:1fr;padding-top:28px}}
+.hero h1{margin:0;font-size:clamp(1.6rem,3.7vw,2.6rem);overflow-wrap:anywhere}
+.hero .sub{margin:14px 0 22px;font-size:1.08rem;color:var(--muted);max-width:46ch}
+#who{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#who input{font:inherit;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);min-width:0;flex:1 1 220px;max-width:300px}
+#who input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--rape-soft)}
+#banner{margin-top:12px;font-size:.92rem}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--warn-soft);color:var(--warn);font-weight:600}
+.pill.on{background:var(--ok-soft);color:var(--ok)}
+
+.plot{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;padding:8px;border-radius:10px;background:var(--soil)}
+.plot span{aspect-ratio:1;border-radius:2px;display:grid;place-items:center;font:600 10px/1 var(--mono);color:rgba(255,255,255,.82);transition:background-color .35s ease}
+@media (max-width:520px){.plot span{font-size:0}}
+.plot-cap{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;justify-content:space-between;margin-top:8px;font-size:.86rem;color:var(--muted)}
+.plot-cap button{font:inherit;font-size:.86rem;border:0;background:none;color:var(--accent);cursor:pointer;padding:2px 0;text-decoration:underline;text-underline-offset:3px}
+@media (prefers-reduced-motion: reduce){.plot span{transition:none}}
+
+/* ---------- nav ---------- */
+nav{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+#tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin}
+#tabs button{font:inherit;font-size:.95rem;white-space:nowrap;border:0;border-bottom:3px solid transparent;background:transparent;color:var(--muted);padding:11px 12px 9px;cursor:pointer}
+#tabs button:hover{color:var(--text)}
+#tabs button.active{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
+.tb{margin-left:7px;font-size:.78rem;font-family:var(--mono);color:var(--muted);font-weight:400}
+
+main{padding-bottom:64px}
+.btn{font:inherit;font-size:.95rem;font-weight:500;border:1.5px solid var(--border);background:var(--surface);color:var(--text);padding:8px 15px;border-radius:8px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--text);border-color:var(--border)}
+
+.lead{font-size:1.04rem;max-width:72ch}
+.schema{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:14px 0;font-size:.88rem}
+.schema span{padding:3px 9px;border-radius:6px;background:var(--surface);border:1px solid var(--border)}
+.schema i{font-style:normal;color:var(--muted)}
+.schema .rnd{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;padding:4px 6px;border:1.5px dashed var(--accent);border-radius:8px;background:transparent}
+.variant{font-size:.92rem;color:var(--muted)}
+
+.pipe{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 4px}
+.chip{font:inherit;font-size:.82rem;border:1px solid var(--border);background:var(--surface);color:var(--muted);padding:3px 10px;border-radius:99px;cursor:pointer}
+.chip.ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.chip.rev{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.chip.cur{border-color:var(--rape);background:var(--rape-soft);color:var(--text);font-weight:600}
+
+/* steps: a left "furrow" shows progress through the sequence */
+.step,.panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:14px 0;scroll-margin-top:60px}
+.step{border-left:5px solid var(--rape)}
+.step.locked{opacity:.6;padding:12px 20px;border-left-color:var(--border);background:transparent}
+.step.done{border-left-color:var(--ok)}
+.step-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.num{width:28px;height:28px;border-radius:50%;background:var(--rape-soft);color:var(--text);display:grid;place-items:center;font:600 .82rem var(--mono);flex:none}
+.done .num{background:var(--ok-soft);color:var(--ok)}
+.locked .num{background:var(--surface2);color:var(--muted)}
+.badge{font-size:.8rem;padding:2px 9px;border-radius:99px;background:var(--surface2);color:var(--muted)}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.rev{background:var(--warn-soft);color:var(--warn)}
+.op{margin:10px 0 4px;max-width:76ch}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px;margin:14px 0 10px}
+.flow-in{display:flex;flex-wrap:wrap;gap:14px 22px}
+.flow-arrow{font-size:1.6rem;color:var(--accent);line-height:1}
+.blk-label{font-size:.84rem;color:var(--muted);margin-bottom:5px}
+.flow-out .blk-label{color:var(--accent);font-weight:600}
+.note{font-size:.82rem;color:var(--muted);margin-top:4px}
+@media (max-width:640px){.flow{flex-direction:column;align-items:flex-start}.flow-arrow{transform:rotate(90deg)}}
+
+.cells.grid{display:inline-grid;gap:4px}
+.cells.row{display:flex;flex-wrap:wrap;gap:4px}
+.cell{display:inline-flex;align-items:center;justify-content:center;height:34px;min-width:34px;padding:0 6px;border-radius:5px;background:var(--surface2);border:1px solid var(--border);font-size:15px;color:var(--text)}
+.w2 .cell{min-width:38px}
+.w4 .cell{min-width:56px}
+.w8 .cell{min-width:100px}
+input.cell{background:var(--surface);border:1.5px solid var(--accent);text-align:center;text-transform:uppercase;outline:none;width:34px;padding:0 2px;font-size:15px}
+.w2 input.cell{width:38px}
+.w8 input.cell{width:100px}
+input.cell:focus{border-color:var(--rape);box-shadow:0 0 0 3px var(--rape-soft)}
+.cell.ok{background:var(--ok-soft);border-color:var(--ok)}
+.cell.bad{background:var(--bad-soft);border-color:var(--bad)}
+.cell.rev{background:var(--warn-soft);border-color:var(--warn)}
+.cell.fixed{color:var(--muted);background:transparent;border-style:dashed}
+.cell.hid{color:var(--muted);background:transparent;border-style:dashed}
+.cell.c-const{background:var(--k-const)} .cell.c-key{background:var(--k-key)} .cell.c-ctr{background:var(--k-ctr)} .cell.c-nonce{background:var(--k-nonce)}
+.cw{display:inline-flex;flex-direction:column;align-items:center;gap:2px}
+.cl{font-size:.75rem;color:var(--muted);white-space:nowrap}
+.sb{font-size:.78rem;color:var(--muted);font-family:var(--mono);min-height:1em}
+
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+.fb{font-size:.92rem}
+.fb.bad{color:var(--bad)} .fb.ok{color:var(--ok)}
+details.hint{margin-top:10px;border-top:1px dashed var(--border);padding-top:8px}
+details.hint summary{cursor:pointer;color:var(--accent);font-size:.92rem;font-weight:500}
+details.hint>div{padding:8px 0 2px;font-size:.93rem}
+.after{margin-top:12px;padding:12px 14px;border-radius:8px;background:var(--surface2);font-size:.95rem}
+.after .cell{background:var(--surface)}
+.ok-line{color:var(--ok);font-weight:600}
+.bad-line{color:var(--bad);font-weight:600}
+
+.scroll{overflow-x:auto;max-width:100%}
+.tbl{border-collapse:collapse;font-size:.8rem}
+.tbl th,.tbl td{padding:3px 5px;text-align:center;border:1px solid var(--border)}
+.tbl th{background:var(--surface2);color:var(--muted);font-weight:600}
+.tbl .hl{background:var(--rape-soft);color:var(--text)}
+.tbl td.hl2{background:var(--rape);color:#1b1500;font-weight:700}
+.trace td{text-align:left;white-space:nowrap}
+.maptbl{display:flex;flex-wrap:wrap;gap:4px 6px;font-family:var(--mono);font-size:.86rem}
+.maptbl span{padding:2px 7px;border:1px solid var(--border);border-radius:5px;background:var(--surface)}
+.maptbl b{color:var(--accent)}
+
+/* intro: a real sequence, so a numbered rail */
+.howto{list-style:none;margin:16px 0;padding:0;counter-reset:h;max-width:760px}
+.howto li{counter-increment:h;position:relative;padding:0 0 18px 52px;border-left:2px solid var(--border);margin-left:17px}
+.howto li:last-child{border-left-color:transparent}
+.howto li::before{content:counter(h);position:absolute;left:-18px;top:-2px;width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font:600 .9rem var(--mono)}
+.howto h3{margin-bottom:2px}
+.howto p{margin:0;color:var(--muted)}
+.toc{max-width:760px;padding-left:20px}
+.toc li{margin:6px 0}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.85rem;margin:8px 0}
+.legend span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px;background:var(--sw);border:1px solid var(--border)}
+.imgs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:12px 0}
+.imgs figure{margin:0}
+.imgs canvas{width:100%;max-width:220px;aspect-ratio:1;image-rendering:pixelated;border-radius:8px;border:1px solid var(--border);display:block}
+.imgs figcaption{font-size:.85rem;color:var(--muted);margin-top:4px}
+.bank{margin-top:10px;font-size:.95rem}
+.prog{display:grid;gap:10px;margin:12px 0}
+.prow{display:grid;grid-template-columns:160px 1fr auto;gap:12px;align-items:center}
+@media (max-width:560px){.prow{grid-template-columns:1fr auto}.prow .pipe{grid-column:1/-1;margin:0}}
+.bar{height:8px;border-radius:99px;background:var(--surface2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.code{font-family:var(--mono);font-size:1.6rem;letter-spacing:.05em;padding:10px 16px;border-radius:8px;background:var(--rape-soft);display:inline-block;margin:6px 0;word-break:break-all}
+.form{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.form input{font:inherit;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);min-width:0;flex:1 1 200px}
+footer{border-top:1px solid var(--border);padding:16px 0 28px;font-size:.85rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap hero">
+    <div>
+      <h1>Криптолабораторія</h1>
+      <p class="sub">Як AES і ChaCha20 захищають дані датчиків, дронів і систем поливу. Розберіть кожен шифр до байта і порахуйте його кроки самі.</p>
+      <form id="who" autocomplete="off">
+        <input id="name" placeholder="Прізвище Ім'я" aria-label="Прізвище та ім'я студента">
+        <button class="btn primary" type="submit">Отримати варіант</button>
+        <button class="btn ghost" type="button" id="demo-btn">Демо-режим</button>
+      </form>
+      <div id="banner"></div>
+    </div>
+    <figure style="margin:0">
+      <div class="plot" id="plot" role="img" aria-label="128 байтів телеметрії ґрунтового датчика до і після шифрування AES-CTR"></div>
+      <figcaption class="plot-cap"><span id="plot-cap"></span><button type="button" id="plot-btn"></button></figcaption>
+    </figure>
+  </div>
+</header>
+<nav><div class="wrap"><div id="tabs"></div></div></nav>
+<main class="wrap" id="main"></main>
+<footer><div class="wrap">
+  Джерела: FIPS-197 «Advanced Encryption Standard (AES)»; RFC 8439 «ChaCha20 and Poly1305 for IETF Protocols»;
+  M. Musa, E. Schaefer, S. Wedig, «A Simplified AES Algorithm and Its Linear and Differential Cryptanalyses», Cryptologia, 2003.
+  Усі обчислення виконуються у вашому браузері, дані нікуди не надсилаються.
+</div></footer>
+
+<script>
+// ===== CORE-START =====
+// ---------- helpers ----------
+const H1 = n => n.toString(16).toUpperCase();
+const H2 = b => b.toString(16).toUpperCase().padStart(2, '0');
+const H4 = v => v.toString(16).toUpperCase().padStart(4, '0');
+const H8 = w => (w >>> 0).toString(16).toUpperCase().padStart(8, '0');
+const hexToBytes = h => h.replace(/\s+/g, '').match(/../g).map(x => parseInt(x, 16));
+const bytesHex = a => Array.from(a, H2).join('');
+const xorB = (a, b) => a.map((x, i) => x ^ b[i]);
+const strBytes = s => Array.from(s, c => c.charCodeAt(0));
+
+// ---------- seeded PRNG ----------
+function cyrb53(str, seed = 0) {
+  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+}
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function makeRng(seedStr) {
+  const f = mulberry32(cyrb53(seedStr) % 4294967296);
+  const int = n => Math.floor(f() * n);
+  return {
+    int,
+    bytes: n => Array.from({ length: n }, () => int(256)),
+    u32: () => (int(65536) * 65536 + int(65536)) >>> 0,
+    pick: a => a[int(a.length)],
+  };
+}
+
+// ---------- AES ----------
+const rotl8 = (x, s) => ((x << s) | (x >>> (8 - s))) & 0xff;
+const AES_SBOX = (() => {
+  const s = new Array(256);
+  let p = 1, q = 1;
+  do {
+    p = (p ^ (p << 1) ^ (p & 0x80 ? 0x1b : 0)) & 0xff;
+    q ^= q << 1; q ^= q << 2; q ^= q << 4; q &= 0xff;
+    if (q & 0x80) q ^= 0x09;
+    s[p] = (q ^ rotl8(q, 1) ^ rotl8(q, 2) ^ rotl8(q, 3) ^ rotl8(q, 4) ^ 0x63) & 0xff;
+  } while (p !== 1);
+  s[0] = 0x63;
+  return s;
+})();
+const xtime = b => ((b << 1) ^ (b & 0x80 ? 0x1b : 0)) & 0xff;
+function gmul(a, b) { let p = 0; while (b) { if (b & 1) p ^= a; a = xtime(a); b >>= 1; } return p; }
+const subBytes = s => s.map(b => AES_SBOX[b]);
+const shiftRows = s => s.map((_, i) => { const r = i % 4, c = i >> 2; return s[((c + r) % 4) * 4 + r]; });
+function mixColumns(s) {
+  const o = new Array(16);
+  for (let c = 0; c < 4; c++) {
+    const [a0, a1, a2, a3] = s.slice(c * 4, c * 4 + 4);
+    o[c * 4]     = xtime(a0) ^ gmul(a1, 3) ^ a2 ^ a3;
+    o[c * 4 + 1] = a0 ^ xtime(a1) ^ gmul(a2, 3) ^ a3;
+    o[c * 4 + 2] = a0 ^ a1 ^ xtime(a2) ^ gmul(a3, 3);
+    o[c * 4 + 3] = gmul(a0, 3) ^ a1 ^ a2 ^ xtime(a3);
+  }
+  return o;
+}
+const RCON = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
+function aesExpand(key) {
+  const w = [];
+  for (let i = 0; i < 4; i++) w.push(key.slice(4 * i, 4 * i + 4));
+  for (let i = 4; i < 44; i++) {
+    let t = w[i - 1].slice();
+    if (i % 4 === 0) { t = [t[1], t[2], t[3], t[0]].map(b => AES_SBOX[b]); t[0] ^= RCON[i / 4 - 1]; }
+    w.push(w[i - 4].map((b, j) => b ^ t[j]));
+  }
+  return w;
+}
+const roundKey = (w, r) => [].concat(w[4 * r], w[4 * r + 1], w[4 * r + 2], w[4 * r + 3]);
+function aesTrace(key, pt) {
+  const w = aesExpand(key);
+  const tr = [];
+  let s = xorB(pt, roundKey(w, 0));
+  tr.push({ r: 0, s });
+  for (let r = 1; r <= 10; r++) {
+    const sb = subBytes(s), sr = shiftRows(sb), mc = r < 10 ? mixColumns(sr) : sr;
+    s = xorB(mc, roundKey(w, r));
+    tr.push({ r, sb, sr, mc, s });
+  }
+  return { w, tr, ct: s };
+}
+const aesRK = key => { const w = aesExpand(key); return Array.from({ length: 11 }, (_, r) => roundKey(w, r)); };
+function aesEnc(rks, b) {
+  let s = xorB(b, rks[0]);
+  for (let r = 1; r <= 10; r++) { s = shiftRows(subBytes(s)); if (r < 10) s = mixColumns(s); s = xorB(s, rks[r]); }
+  return s;
+}
+const ctrBlock = (nonce12, i) => nonce12.concat([i >>> 24 & 255, i >>> 16 & 255, i >>> 8 & 255, i & 255]);
+function ctrKeystream(rks, nonce12, len) {
+  let ks = [];
+  for (let i = 1; ks.length < len; i++) ks = ks.concat(aesEnc(rks, ctrBlock(nonce12, i)));
+  return ks.slice(0, len);
+}
+
+// ---------- S-AES ----------
+const SAES_SBOX = [0x9, 0x4, 0xA, 0xB, 0xD, 0x1, 0x8, 0x5, 0x6, 0x2, 0x0, 0x3, 0xC, 0xE, 0xF, 0x7];
+function gf16mul(a, b) { let p = 0; for (let i = 0; i < 4; i++) { if (b & 1) p ^= a; b >>= 1; a <<= 1; if (a & 0x10) a ^= 0x13; } return p & 0xf; }
+const saesNibs = v => [v >> 12 & 15, v >> 8 & 15, v >> 4 & 15, v & 15];
+const saesVal = n => (n[0] << 12) | (n[1] << 8) | (n[2] << 4) | n[3];
+const saesSub = n => n.map(x => SAES_SBOX[x]);
+const saesShift = n => [n[0], n[3], n[2], n[1]];
+const saesMix = n => [n[0] ^ gf16mul(4, n[1]), gf16mul(4, n[0]) ^ n[1], n[2] ^ gf16mul(4, n[3]), gf16mul(4, n[2]) ^ n[3]];
+const saesRot = w => ((w & 15) << 4) | (w >> 4);
+const saesSubByte = w => (SAES_SBOX[w >> 4] << 4) | SAES_SBOX[w & 15];
+const saesG = (w, rc) => rc ^ saesSubByte(saesRot(w));
+function saesKeys(k) {
+  const w0 = k >> 8, w1 = k & 255;
+  const w2 = w0 ^ saesG(w1, 0x80), w3 = w2 ^ w1, w4 = w2 ^ saesG(w3, 0x30), w5 = w4 ^ w3;
+  return { w: [w0, w1, w2, w3, w4, w5], K: [(w0 << 8) | w1, (w2 << 8) | w3, (w4 << 8) | w5] };
+}
+function saesTrace(pt, k) {
+  const { w, K } = saesKeys(k);
+  const Kn = K.map(saesNibs);
+  const t = { w, K, Kn };
+  t.s0 = saesNibs(pt);
+  t.ark0 = xorB(t.s0, Kn[0]);
+  t.sn1 = saesSub(t.ark0); t.sr1 = saesShift(t.sn1); t.mc1 = saesMix(t.sr1); t.ark1 = xorB(t.mc1, Kn[1]);
+  t.sn2 = saesSub(t.ark1); t.sr2 = saesShift(t.sn2); t.ark2 = xorB(t.sr2, Kn[2]);
+  t.ct = saesVal(t.ark2);
+  return t;
+}
+
+// ---------- ChaCha20 ----------
+const rotl32 = (v, n) => ((v << n) | (v >>> (32 - n))) >>> 0;
+const add32 = (a, b) => (a + b) >>> 0;
+const QR_SPEC = [[0, 1, 3, 16], [2, 3, 1, 12], [0, 1, 3, 8], [2, 3, 1, 7]];
+function qrLines(v) {
+  const s = v.slice();
+  return QR_SPEC.map(([x, y, z, n]) => {
+    const before = s.slice();
+    s[x] = add32(s[x], s[y]); const o1 = s[x];
+    s[z] = (s[z] ^ s[x]) >>> 0; const o2 = s[z];
+    s[z] = rotl32(s[z], n); const o3 = s[z];
+    return { before, out: [o1, o2, o3], after: s.slice(), x, y, z, n };
+  });
+}
+function qr(s, a, b, c, d) {
+  s[a] = add32(s[a], s[b]); s[d] = rotl32(s[d] ^ s[a], 16);
+  s[c] = add32(s[c], s[d]); s[b] = rotl32(s[b] ^ s[c], 12);
+  s[a] = add32(s[a], s[b]); s[d] = rotl32(s[d] ^ s[a], 8);
+  s[c] = add32(s[c], s[d]); s[b] = rotl32(s[b] ^ s[c], 7);
+}
+function chachaBlock(key, counter, nonce) {
+  const le = (a, i) => (a[i] | a[i + 1] << 8 | a[i + 2] << 16 | a[i + 3] << 24) >>> 0;
+  const init = [0x61707865, 0x3320646e, 0x79622d32, 0x6b206574];
+  for (let i = 0; i < 8; i++) init.push(le(key, 4 * i));
+  init.push(counter >>> 0);
+  for (let i = 0; i < 3; i++) init.push(le(nonce, 4 * i));
+  const x = init.slice(), snaps = [init.slice()];
+  for (let i = 0; i < 10; i++) {
+    qr(x, 0, 4, 8, 12); qr(x, 1, 5, 9, 13); qr(x, 2, 6, 10, 14); qr(x, 3, 7, 11, 15);
+    qr(x, 0, 5, 10, 15); qr(x, 1, 6, 11, 12); qr(x, 2, 7, 8, 13); qr(x, 3, 4, 9, 14);
+    snaps.push(x.slice());
+  }
+  const out = x.map((v, i) => add32(v, init[i]));
+  const bytes = [];
+  out.forEach(v => bytes.push(v & 255, v >>> 8 & 255, v >>> 16 & 255, v >>> 24 & 255));
+  return { init, snaps, out, bytes };
+}
+// ===== CORE-END =====
+
+// ===== CONTENT DATA =====
+// Усі повідомлення рівно по 16 ASCII-символів (один блок AES)
+const CBC_MSGS = [['IRRIGATE ZONE 3 ', 'VALVE 12 OPEN 40'], ['HARVEST FIELD B4', 'START 06:00 MON '],
+  ['SELL WHEAT 120 T', 'PRICE 7300 UAH/T'], ['DRONE ROUTE #17 ', 'SPRAY RATE 2L/HA']];
+const CTR_MSGS = ['SOIL H=31% T=14C', 'GPS 49.23N 28.4E', 'SILO 3 TEMP 18 C', 'MILK YIELD 31.5L'];
+const NR_P1 = ['SENSOR HEARTBEAT', 'STATUS: ALL OK  '];
+const NR_P2 = ['ADMIN PIN 4471  ', 'BUY PRICE 6900  ', 'YIELD 6.8 T/HA  '];
+const CC_WORDS = ['WHEAT!', 'BARLEY', 'TOMATO', 'POTATO', 'CARROT', 'CLOVER'];
+const FIELDS = ['A1', 'B4', 'C2', 'D7', 'E3', 'F5'];
+const HERO_MSG = 'NODE=B4-07;SOIL_H=31.2%;SOIL_T=14.6C;AIR_T=17.9C;RAIN=0.0MM;N=42;P=18;K=35;PH=6.4;BAT=3.71V;RSSI=-97;TS=2026-10-13T06:00;STATUS=OK;';
+const FIPS_CT = '3925841D02DC09FBDC118597196A0B32';
+const RFC_QR = [0xea2a92f4, 0xcb1cf8ce, 0x4581472e, 0x5881c4bb];
+const RFC_BLOCK16 = '10F1E7E4D13B5915500FDD1FA32071C4';
+
+// ===== STATE =====
+const TABS = [
+  { id: 'intro', t: 'Як працювати' },
+  { id: 'saes', t: '1. S-AES' },
+  { id: 'aes', t: '2. AES-128' },
+  { id: 'chacha', t: '3. ChaCha20' },
+  { id: 'modes', t: '4. Режими і атаки' },
+  { id: 'result', t: 'Результат' },
+];
+const TAB_NAMES = { saes: 'S-AES', aes: 'AES-128', chacha: 'ChaCha20', modes: 'Режими і атаки' };
+// Порядок бітів у коді завершення — НЕ змінювати після видачі завдань
+const ALL_IDS = ['saes.ke', 'saes.ark0', 'saes.sn1', 'saes.sr1', 'saes.mc1', 'saes.ark1', 'saes.sn2', 'saes.sr2', 'saes.ark2',
+  'aes.ark0', 'aes.sb', 'aes.sr', 'aes.mc', 'aes.ke', 'aes.ark1',
+  'cc.qr1', 'cc.qr2', 'cc.qr3', 'cc.qr4', 'cc.xor',
+  'm.cbc1', 'm.cbc2', 'm.ctr', 'm.nonce', 'm.flip'];
+const SALT = 'cryptolab-v1';
+const LS = 'cryptolab.v1.';
+
+let V, STEPS = {}, ORDER = {}, CHAINS = {};
+const P = { name: '', solved: new Set(), revealed: new Set() };
+let cur = 'intro';
+
+const norm = s => s.normalize('NFC').replace(/[’ʼ`]/g, "'").trim().replace(/\s+/g, ' ').toLowerCase();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage unavailable */ } }
+
+function loadProgress() {
+  P.solved = new Set(); P.revealed = new Set();
+  if (!P.name) return;
+  try {
+    const o = JSON.parse(lsGet(LS + 'p.' + norm(P.name)) || '{}');
+    (o.s || []).forEach(x => P.solved.add(x));
+    (o.r || []).forEach(x => P.revealed.add(x));
+  } catch (e) { /* corrupted entry */ }
+}
+function save() {
+  if (P.name) lsSet(LS + 'p.' + norm(P.name), JSON.stringify({ s: [...P.solved], r: [...P.revealed] }));
+}
+
+// ===== VARIANT =====
+function buildVariant(name) {
+  const demo = !name;
+  const R = makeRng(demo ? 'cryptolab-demo' : SALT + '|' + norm(name));
+  const v = { demo };
+  v.saes = demo ? { pt: 0xD728, key: 0x4AF5 } : { pt: R.int(65536), key: R.int(65536) };
+  v.aes = demo
+    ? { key: hexToBytes('2b7e151628aed2a6abf7158809cf4f3c'), pt: hexToBytes('3243f6a8885a308d313198a2e0370734') }
+    : { key: R.bytes(16), pt: R.bytes(16) };
+  v.aesCol = { ark0: R.int(4), sb: R.int(4), mc: R.int(4), ark1: R.int(4) };
+  v.qr = demo ? [0x11111111, 0x01020304, 0x9b8d6f43, 0x01234567] : [R.u32(), R.u32(), R.u32(), R.u32()];
+  v.cc = demo
+    ? { key: Array.from({ length: 32 }, (_, i) => i), nonce: hexToBytes('000000090000004a00000000'), counter: 1 }
+    : { key: R.bytes(32), nonce: R.bytes(12), counter: 1 };
+  v.ccWord = R.pick(CC_WORDS);
+  v.m = {
+    key: R.bytes(16), iv: R.bytes(16), cbc: R.pick(CBC_MSGS), o1: 4 * R.int(4), o2: 4 * R.int(4),
+    ctrNonce: R.bytes(12), ctrMsg: R.pick(CTR_MSGS), oc: 4 * R.int(4),
+    nrNonce: R.bytes(12), nrP1: R.pick(NR_P1), nrP2: R.pick(NR_P2), on: 4 * R.int(4),
+    flipNonce: R.bytes(12), field: R.pick(FIELDS), dose: 100 + R.int(200), tgt: 900 + R.int(100),
+  };
+  return v;
+}
+
+// ===== RENDER HELPERS =====
+const hx = a => a.map(H2), nx = a => a.map(H1), wx = a => a.map(H8);
+const asc = a => a.map(b => b === 32 ? '␣' : (b > 32 && b < 127 ? String.fromCharCode(b) : '·'));
+const ascStr = a => a.map(b => (b >= 32 && b < 127 ? String.fromCharCode(b) : '·')).join('');
+const bin = (v, bits) => (v >>> 0).toString(2).padStart(bits, '0').replace(/(.{4})(?=.)/g, '$1 ');
+const grp = a => bytesHex(a).replace(/(.{8})(?=.)/g, '$1 ');
+const M4 = { kind: 'm', rows: 4, cols: 4 }, M2 = { kind: 'm', rows: 2, cols: 2 }, ROW = { kind: 'r' };
+const ALL = n => Array(n).fill(true);
+const colMask = c => Array.from({ length: 16 }, (_, i) => (i >> 2) === c);
+const rowsMask = rows => Array.from({ length: 16 }, (_, i) => rows.includes(i % 4));
+const rangeMask = (n, o, len) => Array.from({ length: n }, (_, i) => i >= o && i < o + len);
+const idxLabels = n => Array.from({ length: n }, (_, i) => String(i));
+
+function cells(vals, lay, o = {}) {
+  const w = Math.max(...vals.map(v => v.length));
+  let order;
+  if (lay.kind === 'm') {
+    order = [];
+    for (let r = 0; r < lay.rows; r++) for (let c = 0; c < lay.cols; c++) order.push(lay.rowMajor ? r * lay.cols + c : c * lay.rows + r);
+  } else order = vals.map((_, i) => i);
+  const items = order.map(i => {
+    const extra = o.cls ? ' ' + o.cls(i) : '';
+    let inner;
+    if (o.edit && o.edit[i]) {
+      inner = `<input class="cell in" data-i="${i}" maxlength="${vals[i].length}" value="${o.prefill ? vals[i] : ''}" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="клітинка ${i}">`;
+    } else if (o.edit && o.hide) {
+      inner = `<span class="cell hid">${'·'.repeat(vals[i].length)}</span>`;
+    } else {
+      const mark = o.mark && o.mark[i] ? ' ' + o.markCls : '';
+      inner = `<span class="cell${o.edit ? ' fixed' : ''}${mark}${extra}">${vals[i]}</span>`;
+    }
+    if (!lay.labels && !lay.sub) return inner;
+    return `<div class="cw">${lay.labels ? `<span class="cl">${lay.labels[i]}</span>` : ''}${inner}${lay.sub ? `<span class="sb">${esc(lay.sub[i])}</span>` : ''}</div>`;
+  });
+  const cls = `cells w${w} ${lay.kind === 'm' ? 'grid' : 'row'}`;
+  const style = lay.kind === 'm' ? ` style="grid-template-columns:repeat(${lay.cols},auto)"` : '';
+  return `<div class="${cls}"${style}>${items.join('')}</div>`;
+}
+const block = b => `<div class="blk"><div class="blk-label">${b.label}</div>${cells(b.values, b.layout || ROW, b.o || {})}${b.note ? `<div class="note">${b.note}</div>` : ''}</div>`;
+
+function hoverTable(cls, head, rowF) {
+  let h = `<div class="scroll"><table class="tbl hov ${cls}"><tr><th>${head}</th>`;
+  for (let c = 0; c < 16; c++) h += `<th data-c="${c}">${H1(c)}</th>`;
+  h += '</tr>';
+  for (let r = 0; r < 16; r++) {
+    h += `<tr><th data-r="${r}">${H1(r)}</th>`;
+    for (let c = 0; c < 16; c++) h += `<td data-r="${r}" data-c="${c}">${rowF(r, c)}</td>`;
+    h += '</tr>';
+  }
+  return h + '</table></div>';
+}
+const aesSboxTable = () => '<p class="muted">Рядок — старша hex-цифра байта, стовпець — молодша. Приклад: S(53) = ED.</p>' + hoverTable('sbox', 'S', (r, c) => H2(AES_SBOX[r * 16 + c]));
+const xorTable = () => '<p class="muted">XOR рахується по одній hex-цифрі (ніблу) незалежно: 3A ⊕ 5C → 3⊕5 = 6, A⊕C = 6 → 66.</p>' + hoverTable('xt', '⊕', (r, c) => H1(r ^ c));
+const mapTable = (f, lab) => `<div class="maptbl">${Array.from({ length: 16 }, (_, x) => `<span><b>${H1(x)}</b> → ${H1(f(x))}</span>`).join('')}</div>${lab ? `<p class="muted">${lab}</p>` : ''}`;
+const saesSboxHint = () => mapTable(x => SAES_SBOX[x], 'S-блок S-AES: нібл x → S(x).');
+const mul4Hint = () => mapTable(x => gf16mul(4, x), 'Множення на 4 у GF(2⁴) за модулем x⁴ + x + 1: x → 4·x.');
+
+// ===== STEP DEFINITIONS =====
+function def(s) {
+  s.chain = s.chain || s.tab;
+  STEPS[s.id] = s;
+  (ORDER[s.tab] = ORDER[s.tab] || []).push(s.id);
+  (CHAINS[s.chain] = CHAINS[s.chain] || []).push(s.id);
+  s.num = ORDER[s.tab].length;
+}
+const prevOf = id => { const c = CHAINS[STEPS[id].chain], i = c.indexOf(id); return i > 0 ? c[i - 1] : null; };
+const nextOf = id => { const c = CHAINS[STEPS[id].chain], i = c.indexOf(id); return c[i + 1] || null; };
+const isDone = id => P.solved.has(id) || P.revealed.has(id);
+const isLocked = id => { const p = prevOf(id); return !!p && !isDone(p); };
+
+function buildSteps(v) {
+  STEPS = {}; ORDER = {}; CHAINS = {};
+  buildSaes(v); buildAes(v); buildChacha(v); buildModes(v);
+}
+
+function buildSaes(v) {
+  const t = saesTrace(v.saes.pt, v.saes.key);
+  const [w0, w1, w2, w3, w4, w5] = t.w;
+  const K = t.Kn, A4 = ALL(4);
+  v.saesT = t;
+  const xh = { t: 'Таблиця XOR', html: xorTable() };
+  const sh = { t: 'S-блок S-AES', html: saesSboxHint() };
+  const nib = (a, lab) => ({ label: lab, values: nx(a), layout: M2 });
+
+  def({ tab: 'saes', id: 'saes.ke', short: 'w₂', title: 'Розширення ключа: обчисліть w₂',
+    op: `Ключ розбивається на два байти: K = w₀‖w₁. Наступне слово ключа:<br><code>w₂ = w₀ ⊕ RCON₁ ⊕ SubNib(RotNib(w₁))</code>, де <code>RCON₁ = 80</code>.<br>
+      <b>RotNib</b> міняє місцями два нібли байта (<code>5C → C5</code>), <b>SubNib</b> замінює кожен нібл за S-блоком.`,
+    inputs: [{ label: `Ключ K = ${H4(v.saes.key)}`, values: [H2(w0), H2(w1)], layout: { kind: 'r', labels: ['w₀', 'w₁'] } }],
+    answer: { label: 'w₂', values: [H2(w2)], layout: ROW, editable: [true] },
+    hints: [sh, xh, { t: 'Проміжні значення', html: `RotNib(w₁) = <code>${H2(saesRot(w1))}</code> → SubNib = <code>${H2(saesSubByte(saesRot(w1)))}</code> → ⊕ RCON₁ = <code>${H2(saesG(w1, 0x80))}</code>. Залишилось XOR з w₀.` }],
+    after: () => `Решту слів ключа сторінка обчислила за тими самими правилами:
+      <code>w₃ = w₂ ⊕ w₁</code>, <code>w₄ = w₂ ⊕ RCON₂ ⊕ SubNib(RotNib(w₃))</code> (RCON₂ = 30), <code>w₅ = w₄ ⊕ w₃</code>.
+      <div class="flow">${block({ label: 'Слова ключа', values: [w0, w1, w2, w3, w4, w5].map(H2), layout: { kind: 'r', labels: ['w₀', 'w₁', 'w₂', 'w₃', 'w₄', 'w₅'] } })}</div>
+      Ключі раундів: K₀ = w₀w₁ = <code>${H4(t.K[0])}</code>, K₁ = w₂w₃ = <code>${H4(t.K[1])}</code>, K₂ = w₄w₅ = <code>${H4(t.K[2])}</code>.` });
+
+  def({ tab: 'saes', id: 'saes.ark0', short: '⊕K₀', title: 'AddRoundKey з K₀',
+    op: 'Кожен нібл стану XOR-иться з ніблом ключа на тій самій позиції. Це єдиний крок, де в шифр потрапляє ключ.',
+    inputs: [nib(t.s0, `Відкритий текст P = ${H4(v.saes.pt)}`), nib(K[0], `Ключ K₀ = ${H4(t.K[0])}`)],
+    answer: { label: 'P ⊕ K₀', values: nx(t.ark0), layout: M2, editable: A4 }, hints: [xh] });
+
+  const sub = (id, n, input, out) => def({ tab: 'saes', id, short: 'SubNib', title: `Раунд ${n}: NibbleSub`,
+    op: 'Кожен нібл замінюється за S-блоком. Це <b>нелінійна</b> частина шифру: без неї весь шифр був би системою лінійних рівнянь, яку легко розв\'язати.',
+    inputs: [nib(input, 'Стан')], answer: { label: 'Після NibbleSub', values: nx(out), layout: M2, editable: A4 }, hints: [sh] });
+  const shift = (id, n, input, out) => def({ tab: 'saes', id, short: 'Shift', title: `Раунд ${n}: ShiftRows`,
+    op: 'Перший рядок не змінюється, другий циклічно зсувається на 1 нібл. У матриці 2×2 це означає, що два нібли нижнього рядка міняються місцями.',
+    inputs: [nib(input, 'Стан')], answer: { label: 'Після ShiftRows', values: nx(out), layout: M2, editable: A4 } });
+
+  sub('saes.sn1', 1, t.ark0, t.sn1);
+  shift('saes.sr1', 1, t.sn1, t.sr1);
+  def({ tab: 'saes', id: 'saes.mc1', short: 'Mix', title: 'Раунд 1: MixColumns',
+    op: `Кожен стовпець множиться на матрицю <code>[1 4; 4 1]</code> у полі GF(2⁴) з модулем x⁴ + x + 1.
+      Позначимо стовпець (s₀, s₁) зверху вниз: <code>s₀′ = s₀ ⊕ 4·s₁</code>, <code>s₁′ = 4·s₀ ⊕ s₁</code>.
+      «4·x» тут не звичайне множення, а множення многочленів із редукцією за модулем. Скористайтеся таблицею.`,
+    inputs: [nib(t.sr1, 'Стан')], answer: { label: 'Після MixColumns', values: nx(t.mc1), layout: M2, editable: A4 },
+    hints: [{ t: 'Таблиця множення на 4', html: mul4Hint() }, xh,
+      { t: 'Проміжні значення', html: `Значення 4·s для кожного ніблу стану (у тих самих позиціях):<div class="flow">${block({ label: '4·s', values: nx(t.sr1.map(x => gf16mul(4, x))), layout: M2 })}</div>` }] });
+  def({ tab: 'saes', id: 'saes.ark1', short: '⊕K₁', title: 'Раунд 1: AddRoundKey з K₁',
+    op: 'Той самий XOR, але з ключем першого раунду K₁ = w₂w₃.',
+    inputs: [nib(t.mc1, 'Стан'), nib(K[1], `K₁ = ${H4(t.K[1])}`)],
+    answer: { label: 'Стан після раунду 1', values: nx(t.ark1), layout: M2, editable: A4 }, hints: [xh] });
+  sub('saes.sn2', 2, t.ark1, t.sn2);
+  shift('saes.sr2', 2, t.sn2, t.sr2);
+  def({ tab: 'saes', id: 'saes.ark2', short: '⊕K₂', title: 'Раунд 2: AddRoundKey з K₂',
+    op: 'В останньому раунді MixColumns <b>немає</b> (як і в AES): він не додає стійкості, а розшифрування без нього простіше. Після XOR з K₂ отримуємо шифротекст.',
+    inputs: [nib(t.sr2, 'Стан'), nib(K[2], `K₂ = ${H4(t.K[2])}`)],
+    answer: { label: 'Шифротекст C', values: nx(t.ark2), layout: M2, editable: A4 }, hints: [xh],
+    after: () => `Шифротекст <b>C = <code>${H4(t.ct)}</code></b> (нібли зчитуються по стовпцях).
+      ${v.demo ? `<p class="${t.ct === 0x24EC ? 'ok-line' : 'bad-line'}">${t.ct === 0x24EC ? '✓' : '✗'} Приклад Musa–Schaefer–Wedig: P = D728, K = 4AF5 → C = 24EC.</p>` : ''}
+      <p>Справжній AES влаштований так само, тільки стан 4×4 байти замість 2×2 ніблів і раундів 10. Переходьте до наступної вкладки.</p>` });
+}
+
+function buildAes(v) {
+  const A = aesTrace(v.aes.key, v.aes.pt);
+  v.aesA = A;
+  const r1 = A.tr[1], s0 = A.tr[0].s, k0 = roundKey(A.w, 0), k1 = roundKey(A.w, 1);
+  const C = v.aesCol;
+  const m4 = (a, lab) => ({ label: lab, values: hx(a), layout: M4 });
+  const xh = { t: 'Таблиця XOR', html: xorTable() };
+  const colNote = c => `Обчисліть стовпець <b>${c}</b> (рахуючи з 0). Інші клітинки вже заповнено.`;
+
+  def({ tab: 'aes', id: 'aes.ark0', short: '⊕K₀', title: 'Початковий AddRoundKey',
+    op: `Перед першим раундом стан XOR-иться з ключем K₀ (для AES-128 це сам ключ). ${colNote(C.ark0)}`,
+    inputs: [m4(v.aes.pt, 'Відкритий текст P'), m4(k0, 'Ключ K₀')],
+    answer: { label: 'P ⊕ K₀', values: hx(s0), layout: M4, editable: colMask(C.ark0) }, hints: [xh] });
+  def({ tab: 'aes', id: 'aes.sb', short: 'SubBytes', title: 'Раунд 1: SubBytes',
+    op: `Кожен байт замінюється за S-блоком AES. S-блок — це обернення в полі GF(2⁸) і афінне перетворення; на практиці це таблиця 16×16. ${colNote(C.sb)}`,
+    inputs: [m4(s0, 'Стан')], answer: { label: 'Після SubBytes', values: hx(r1.sb), layout: M4, editable: colMask(C.sb) },
+    hints: [{ t: 'S-блок AES', html: aesSboxTable() }] });
+  def({ tab: 'aes', id: 'aes.sr', short: 'ShiftRows', title: 'Раунд 1: ShiftRows',
+    op: 'Рядок r циклічно зсувається вліво на r позицій: рядок 0 без змін, рядок 1 на 1, рядок 2 на 2, рядок 3 на 3. Завдяки цьому байти одного стовпця розходяться по різних стовпцях. Заповніть рядки 1–3.',
+    inputs: [m4(r1.sb, 'Стан')], answer: { label: 'Після ShiftRows', values: hx(r1.sr), layout: M4, editable: rowsMask([1, 2, 3]) } });
+  {
+    const c = C.mc, a = r1.sr.slice(c * 4, c * 4 + 4);
+    def({ tab: 'aes', id: 'aes.mc', short: 'MixColumns', title: 'Раунд 1: MixColumns',
+      op: `Кожен стовпець (a₀, a₁, a₂, a₃) множиться на фіксовану матрицю в полі GF(2⁸):
+        <div class="mono" style="margin:6px 0;font-size:.92em">b₀ = 2·a₀ ⊕ 3·a₁ ⊕ a₂ ⊕ a₃<br>b₁ = a₀ ⊕ 2·a₁ ⊕ 3·a₂ ⊕ a₃<br>b₂ = a₀ ⊕ a₁ ⊕ 2·a₂ ⊕ 3·a₃<br>b₃ = 3·a₀ ⊕ a₁ ⊕ a₂ ⊕ 2·a₃</div>
+        Зміна одного байта входу змінює всі 4 байти стовпця (дифузія). ${colNote(c)}`,
+      inputs: [m4(r1.sr, 'Стан')], answer: { label: 'Після MixColumns', values: hx(r1.mc), layout: M4, editable: colMask(c) },
+      hints: [{ t: 'Як множити на 2 і на 3', html: `<p><b>2·x</b> (xtime): зсув x вліво на 1 біт; якщо старший біт x був 1, результат XOR-иться з <code>1B</code>. Приклад: 2·57 = AE; 2·AE = 15C → 5C ⊕ 1B = 47.</p><p><b>3·x</b> = 2·x ⊕ x. Приклад: 3·57 = AE ⊕ 57 = F9.</p>` }, xh,
+        { t: 'Проміжні значення для стовпця', html: `<div class="scroll"><table class="tbl"><tr><th></th>${a.map((_, i) => `<th>a${i}</th>`).join('')}</tr>
+          <tr><th>x</th>${a.map(x => `<td>${H2(x)}</td>`).join('')}</tr><tr><th>2·x</th>${a.map(x => `<td>${H2(xtime(x))}</td>`).join('')}</tr><tr><th>3·x</th>${a.map(x => `<td>${H2(gmul(x, 3))}</td>`).join('')}</tr></table></div>` }] });
+  }
+  {
+    const w = A.w, rot = [w[3][1], w[3][2], w[3][3], w[3][0]], sw = rot.map(b => AES_SBOX[b]), tt = [sw[0] ^ 1, sw[1], sw[2], sw[3]];
+    const col = { kind: 'm', rows: 4, cols: 1 };
+    def({ tab: 'aes', id: 'aes.ke', short: 'w₄', title: 'Розширення ключа: перше слово K₁',
+      op: `Ключ K₀ — це 4 слова w₀…w₃ (стовпці). Ключ раунду 1 складається зі слів w₄…w₇. Перше з них:<br>
+        <code>w₄ = w₀ ⊕ SubWord(RotWord(w₃)) ⊕ Rcon₁</code>, де <b>RotWord</b> циклічно зсуває слово на 1 байт вгору,
+        <b>SubWord</b> застосовує S-блок до кожного байта, <code>Rcon₁ = (01, 00, 00, 00)</code>.`,
+      inputs: [{ label: 'w₀', values: hx(w[0]), layout: col }, { label: 'w₃', values: hx(w[3]), layout: col }],
+      answer: { label: 'w₄', values: hx(w[4]), layout: col, editable: ALL(4) },
+      hints: [{ t: 'S-блок AES', html: aesSboxTable() }, xh,
+        { t: 'Проміжні значення', html: `RotWord(w₃) = <code>${hx(rot).join(' ')}</code> → SubWord = <code>${hx(sw).join(' ')}</code> → ⊕ Rcon₁ = <code>${hx(tt).join(' ')}</code>. Залишилось XOR з w₀.` }],
+      after: () => `Інші слова K₁ рахуються простіше: <code>w₅ = w₄ ⊕ w₁</code>, <code>w₆ = w₅ ⊕ w₂</code>, <code>w₇ = w₆ ⊕ w₃</code>.
+        <div class="flow">${block({ label: 'Ключ раунду 1: K₁ = w₄ w₅ w₆ w₇', values: hx(k1), layout: M4 })}</div>` });
+  }
+  def({ tab: 'aes', id: 'aes.ark1', short: '⊕K₁', title: 'Раунд 1: AddRoundKey з K₁',
+    op: `Завершуємо раунд 1: XOR зі щойно обчисленим ключем K₁. ${colNote(C.ark1)}`,
+    inputs: [m4(r1.mc, 'Стан'), m4(k1, 'Ключ K₁')],
+    answer: { label: 'Стан після раунду 1', values: hx(r1.s), layout: M4, editable: colMask(C.ark1) }, hints: [xh],
+    after: () => aesTraceHtml(A, v.demo) });
+}
+
+function aesTraceHtml(A, demo) {
+  const rows = A.tr.map(t => `<tr><td>${t.r === 0 ? 'вхід ⊕ K₀' : t.r}</td><td>${grp(t.s)}</td><td>${grp(roundKey(A.w, t.r))}</td></tr>`).join('');
+  const ct = bytesHex(A.ct);
+  return `<b>Решту 9 раундів обчислила сторінка.</b> Стан записано рядком: байти 0–15, тобто стовпець за стовпцем.
+    <div class="scroll" style="margin:8px 0"><table class="tbl trace"><tr><th>Раунд</th><th>Стан після раунду</th><th>Ключ раунду</th></tr>${rows}</table></div>
+    <p>Шифротекст <b>C = <code>${grp(A.ct)}</code></b>. Раунд 10 — без MixColumns.</p>
+    ${demo ? `<p class="${ct === FIPS_CT ? 'ok-line' : 'bad-line'}">${ct === FIPS_CT ? '✓' : '✗'} Збігається з прикладом FIPS-197, додаток B.</p>` : ''}`;
+}
+
+function buildChacha(v) {
+  const lines = qrLines(v.qr);
+  const NM = 'abcd';
+  lines.forEach((L, k) => {
+    const X = NM[L.x], Y = NM[L.y], Z = NM[L.z];
+    def({ tab: 'chacha', chain: 'cc', id: 'cc.qr' + (k + 1), short: 'QR ' + (k + 1), title: `Quarter-round, рядок ${k + 1}: ${X} += ${Y}; ${Z} ^= ${X}; ${Z} <<<= ${L.n}`,
+      op: (k === 0 ? `Quarter-round перетворює 4 слова (a, b, c, d) по 32 біти. Він складається з 4 однакових рядків, кожен має три операції ARX:
+          <b>A</b>dd — додавання за модулем 2³², <b>R</b>otate — циклічний зсув, <b>X</b>OR. `
+        : '') + `Обчисліть три значення по черзі: кожне наступне використовує попереднє.`,
+      inputs: [{ label: 'Поточні значення', values: wx(L.before), layout: { kind: 'r', labels: ['a', 'b', 'c', 'd'] } }],
+      answer: { label: 'Результати операцій', values: wx(L.out), layout: { kind: 'r', labels: [`${X} ← ${X} + ${Y}`, `${Z} ← ${Z} ⊕ ${X}`, `${Z} ← ${Z} ⋘ ${L.n}`] }, editable: ALL(3) },
+      hints: [{ t: 'Як рахувати', html: `<p><b>+</b> — додавання за модулем 2³²: якщо сума має 9 hex-цифр, старшу (перенос) відкидаємо. Зручно рахувати в калькуляторі в режимі «Програміст».</p>
+          <p><b>⊕</b> — побітове XOR, можна по одній hex-цифрі.</p>
+          <p><b>⋘ n</b> — циклічний зсув вліво на n біт: біти, що «випадають» зліва, повертаються справа. Зсуви на 16, 12 і 8 біт кратні 4, тобто це зсув на 4, 3 і 2 hex-цифри: <code>1234ABCD ⋘ 8 = 34ABCD12</code>. Тільки для ⋘ 7 потрібен двійковий запис.</p>` },
+        { t: 'Таблиця XOR', html: xorTable() },
+        { t: 'Двійковий запис вхідних слів', html: `<div class="mono" style="font-size:.85em;line-height:1.8">${[L.x, L.y, L.z].map(i => `${NM[i]} = ${bin(L.before[i], 32)}`).join('<br>')}</div>` }],
+      after: () => `Нові значення:<div class="flow">${block({ label: k === 3 ? 'Результат quarter-round' : `Після рядка ${k + 1}`, values: wx(L.after), layout: { kind: 'r', labels: ['a', 'b', 'c', 'd'] } })}</div>` +
+        (k === 3 && v.demo ? `<p class="${L.after.every((x, i) => x === RFC_QR[i]) ? 'ok-line' : 'bad-line'}">✓ Збігається з тестовим вектором RFC 8439, розділ 2.1.1.</p>` : '') +
+        (k === 3 ? '<p>Повний блок ChaCha20 — це 80 таких quarter-round. Подивіться на нього нижче.</p>' : '') });
+  });
+
+  const B = chachaBlock(v.cc.key, v.cc.counter, v.cc.nonce);
+  v.ccB = B;
+  const pb = strBytes(v.ccWord), ks = B.bytes.slice(0, pb.length), ct = xorB(pb, ks);
+  def({ tab: 'chacha', chain: 'ccx', id: 'cc.xor', short: 'XOR', title: 'Шифрування: P ⊕ keystream',
+    op: 'Потоковий шифр не перетворює сам текст: він генерує keystream і XOR-ить його з відкритим текстом байт за байтом. Візьміть перші байти keystream з блоку вище і зашифруйте слово.',
+    inputs: [{ label: `Відкритий текст «${esc(v.ccWord)}» (ASCII)`, values: hx(pb), layout: { kind: 'r', sub: asc(pb) } },
+      { label: 'Keystream (байти 0…' + (pb.length - 1) + ' блоку)', values: hx(ks), layout: ROW }],
+    answer: { label: 'Шифротекст C', values: hx(ct), layout: ROW, editable: ALL(pb.length) },
+    hints: [{ t: 'Таблиця XOR', html: xorTable() }],
+    after: () => `Розшифрування — та сама операція: <code>C ⊕ keystream = P</code>. Звідси головне правило потокових шифрів:
+      <b>пара (ключ, nonce) ніколи не повторюється</b>, інакше два повідомлення будуть зашифровані одним keystream. Що тоді стається, дивіться на вкладці «Режими і атаки».` });
+}
+
+function buildModes(v) {
+  const m = v.m, rk = aesRK(m.key);
+  v.mrk = rk;
+  const xh = { t: 'Таблиця XOR', html: xorTable() };
+  const arow = (a, lab) => ({ label: lab, values: hx(a), layout: { kind: 'r', sub: asc(a) } });
+  const brow = (a, lab) => ({ label: lab, values: hx(a), layout: ROW });
+  const rangeNote = o => `Обчисліть байти <b>${o}–${o + 3}</b>; решту сторінка приховала.`;
+
+  const P1 = strBytes(m.cbc[0]), P2 = strBytes(m.cbc[1]);
+  const X1 = xorB(P1, m.iv), C1 = aesEnc(rk, X1), X2 = xorB(P2, C1), C2 = aesEnc(rk, X2);
+  def({ tab: 'modes', chain: 'cbc', id: 'm.cbc1', short: 'CBC 1', title: 'CBC: вхід шифру для блоку 1',
+    op: `У режимі CBC кожен блок відкритого тексту перед шифруванням XOR-иться з попереднім блоком шифротексту:
+      <code>Cᵢ = E_K(Pᵢ ⊕ Cᵢ₋₁)</code>. Для першого блоку попереднього немає, тому використовують випадковий вектор ініціалізації: <code>C₀ = IV</code>. ${rangeNote(m.o1)}`,
+    inputs: [arow(P1, 'P₁'), brow(m.iv, 'IV')],
+    answer: { label: 'Вхід E_K для блоку 1', values: hx(X1), layout: ROW, editable: rangeMask(16, m.o1, 4), hideOthers: true }, hints: [xh],
+    after: () => `<div class="flow">${block(brow(C1, 'C₁ = E_K(P₁ ⊕ IV) — обчислила «чорна скринька» AES'))}</div>` });
+  def({ tab: 'modes', chain: 'cbc', id: 'm.cbc2', short: 'CBC 2', title: 'CBC: вхід шифру для блоку 2',
+    op: `Що подається на вхід E_K для другого блоку? Подумайте, яке зі значень нижче потрібне. ${rangeNote(m.o2)}`,
+    inputs: [arow(P2, 'P₂'), brow(m.iv, 'IV'), brow(C1, 'C₁')],
+    answer: { label: 'Вхід E_K для блоку 2', values: hx(X2), layout: ROW, editable: rangeMask(16, m.o2, 4), hideOthers: true }, hints: [xh],
+    after: () => `<code>P₂ ⊕ C₁</code>. <div class="flow">${block(brow(C2, 'C₂ = E_K(P₂ ⊕ C₁)'))}</div>
+      Завдяки зчепленню однакові блоки відкритого тексту дають різні шифротексти. Ціна: шифрування не можна розпаралелити, а помилка в Cᵢ псує розшифрування двох блоків.` });
+
+  const cb = ctrBlock(m.ctrNonce, 1), ks = aesEnc(rk, cb), Pc = strBytes(m.ctrMsg), Cc = xorB(Pc, ks);
+  def({ tab: 'modes', chain: 'ctr', id: 'm.ctr', short: 'CTR', title: 'CTR: блоковий шифр стає потоковим',
+    op: `У режимі CTR шифрується не текст, а лічильник: <code>KSᵢ = E_K(Nonce ‖ i)</code>, а потім <code>Cᵢ = Pᵢ ⊕ KSᵢ</code>.
+      AES тут працює як генератор keystream, так само як ChaCha20. ${rangeNote(m.oc)}`,
+    inputs: [brow(cb, 'Лічильник: Nonce (12 байтів) ‖ 00000001'), brow(ks, 'KS₁ = E_K(лічильник)'), arow(Pc, 'P₁')],
+    answer: { label: 'C₁', values: hx(Cc), layout: ROW, editable: rangeMask(16, m.oc, 4), hideOthers: true }, hints: [xh],
+    after: () => 'Блоки шифруються незалежно, тому CTR легко розпаралелити, а розшифрування не потребує E_K⁻¹. Але nonce не можна використовувати двічі з тим самим ключем. Наступне завдання показує чому.' });
+
+  const nb = ctrBlock(m.nrNonce, 1), nks = aesEnc(rk, nb), N1 = strBytes(m.nrP1), N2 = strBytes(m.nrP2), NC1 = xorB(N1, nks), NC2 = xorB(N2, nks);
+  def({ tab: 'modes', chain: 'nonce', id: 'm.nonce', short: 'nonce', title: 'Атака: повторний nonce',
+    op: `Розробник помилився, і два повідомлення зашифровано в CTR з тим самим ключем <b>і тим самим nonce</b>. Ключа ви не знаєте.
+      Зате знаєте, що перше повідомлення — службове привітання. Відновіть друге. ${rangeNote(m.on)}`,
+    inputs: [brow(NC1, 'C₁'), brow(NC2, 'C₂'), arow(N1, 'P₁ (відомий)')],
+    answer: { label: 'P₂', values: hx(N2), layout: ROW, editable: rangeMask(16, m.on, 4), hideOthers: true },
+    hints: [{ t: 'Ідея', html: '<code>C₁ ⊕ C₂ = (P₁ ⊕ KS) ⊕ (P₂ ⊕ KS) = P₁ ⊕ P₂</code>: keystream скорочується. Отже <code>P₂ = C₁ ⊕ C₂ ⊕ P₁</code>.' }, xh],
+    after: () => `Друге повідомлення: <b>«${esc(m.nrP2)}»</b>, і ключ для цього не знадобився.
+      Так зламали WEP у Wi-Fi: 24-бітний IV повторювався вже через кілька годин трафіку.` });
+
+  const fm = strBytes(`dose=${m.dose};field=${m.field}`), ft = `dose=${m.tgt};field=${m.field}`;
+  const fks = ctrKeystream(rk, m.flipNonce, fm.length), fc = xorB(fm, fks);
+  const fsol = fc.map((c, i) => c ^ fm[i] ^ ft.charCodeAt(i));
+  const flip = {
+    html(done) {
+      const vals = done ? fsol : fc;
+      const lay = { kind: 'r', labels: idxLabels(fm.length), sub: asc(fm) };
+      return `<div class="flow"><div class="blk"><div class="blk-label">${done ? 'Змінений шифротекст' : 'Перехоплений шифротекст (клітинки можна редагувати)'}</div>
+        ${cells(hx(vals), lay, done ? {} : { edit: ALL(fm.length), prefill: true })}<div class="note">Під клітинками — відомий вам вихідний відкритий текст.</div></div></div>
+        ${done ? '' : `<div class="actions"><button class="btn primary" data-act="check">Надіслати контролеру</button><button class="btn" data-act="reset">Скинути</button><button class="btn ghost" data-act="reveal">Показати відповідь</button></div>`}
+        <div class="bank">${done ? `Контролер розшифрував: <code>${esc(ft)}</code> <span class="ok-line">✓ норму ${m.tgt} л/га прийнято</span>` : ''}</div>`;
+    },
+    check() {
+      const box = stepBox('m.flip'), out = box.querySelector('.bank');
+      const ins = [...box.querySelectorAll('input.cell')].sort((a, b) => a.dataset.i - b.dataset.i);
+      if (ins.some(i => !/^[0-9A-F]{2}$/i.test(i.value))) { out.innerHTML = '<span class="bad-line">Кожна клітинка має містити рівно 2 hex-цифри.</span>'; return; }
+      const dec = xorB(ins.map(i => parseInt(i.value, 16)), fks), s = ascStr(dec);
+      if (s === ft) { markSolved('m.flip'); return; }
+      const ok = /^dose=\d{3};field=[A-Z]\d$/.test(s);
+      out.innerHTML = `Контролер розшифрував: <code>${esc(s)}</code> — <span class="bad-line">${ok ? `норма ${s.slice(5, 8)} л/га, а потрібно ${m.tgt}` : 'команду пошкоджено, контролер її відхилив'}</span>`;
+    },
+  };
+  def({ tab: 'modes', chain: 'flip', id: 'm.flip', short: 'bit-flip', title: 'Атака: зміна норми внесення без ключа (bit-flipping)',
+    op: `Шифрування не гарантує <b>цілісності</b>. Контролер обприскувача отримує по радіо команди, зашифровані AES-CTR, і не перевіряє MAC.
+      Ви перехопили команду <code>dose=${m.dose};field=${m.field}</code>: внести ${m.dose} л/га на поле ${m.field}. Змініть шифротекст так,
+      щоб контролер прийняв норму <b>${m.tgt}</b> л/га. Ключа ви не знаєте.`,
+    custom: flip,
+    hints: [{ t: 'Ідея', html: '<code>P = C ⊕ KS</code>. Якщо змінити байт шифротексту <code>C′[i] = C[i] ⊕ Δ</code>, то після розшифрування <code>P′[i] = P[i] ⊕ Δ</code>: кожен біт, перевернутий у C, перевертається в P. Δ = (стара цифра) ⊕ (нова цифра) в ASCII.' },
+      { t: 'Детальніше', html: `Цифри в ASCII: '0' = 30, '1' = 31, …, '9' = 39. Норма записана в байтах 5–7. Приклад: щоб '1' стала '9', Δ = 31 ⊕ 39 = 08.` },
+      { t: 'Таблиця XOR', html: xorTable() }],
+    after: () => `Не знаючи ключа, ви змінили норму внесення в кілька разів, і посів на полі ${m.field} було б знищено.
+      Від цього захищають <b>автентифіковані режими (AEAD)</b>: AES-GCM і ChaCha20-Poly1305 додають до шифротексту тег,
+      і будь-яка зміна хоч одного біта робить його недійсним. Тому в TLS 1.3 дозволено лише AEAD-шифри, а в LoRaWAN кожен пакет має MIC.` });
+}
+
+// ===== STEP RENDERING =====
+const stepBox = id => document.getElementById('step-' + id);
+const slot = id => `<section class="step" id="step-${id}" data-id="${id}"></section>`;
+const slots = (tab, from, to) => ORDER[tab].slice(from, to).map(slot).join('');
+
+function renderStep(id) {
+  const st = STEPS[id], box = stepBox(id);
+  if (!box) return;
+  const locked = isLocked(id), solved = P.solved.has(id), rev = P.revealed.has(id), done = solved || rev;
+  const badge = solved ? '<span class="badge ok">✓ виконано</span>' : rev ? '<span class="badge rev">відповідь показано</span>' : locked ? '<span class="badge">закрито</span>' : '';
+  let h = `<div class="step-head"><span class="num">${st.num}</span><h3>${st.title}</h3>${badge}</div>`;
+  if (locked) {
+    box.className = 'step locked';
+    box.innerHTML = h + '<p class="muted" style="margin:6px 0 0">Відкриється після попереднього кроку.</p>';
+    return;
+  }
+  box.className = 'step' + (done ? ' done' : '');
+  h += `<div class="op">${st.op}</div>`;
+  if (st.custom) h += st.custom.html(done);
+  else {
+    const a = st.answer;
+    const ao = done ? { mark: a.editable, markCls: solved ? 'ok' : 'rev' } : { edit: a.editable, hide: a.hideOthers };
+    h += `<div class="flow"><div class="flow-in">${st.inputs.map(block).join('')}</div><div class="flow-arrow" aria-hidden="true">→</div>
+      <div class="flow-out"><div class="blk-label">${a.label}</div>${cells(a.values, a.layout, ao)}</div></div>`;
+    if (!done) h += `<div class="actions"><button class="btn primary" data-act="check">Перевірити</button><button class="btn ghost" data-act="reveal">Показати відповідь</button><span class="fb"></span></div>`;
+  }
+  if (!done && st.hints) h += st.hints.map(x => `<details class="hint"><summary>Підказка: ${x.t}</summary><div>${x.html}</div></details>`).join('');
+  if (done && st.after) h += `<div class="after">${st.after()}</div>`;
+  box.innerHTML = h;
+}
+
+function doCheck(id) {
+  const st = STEPS[id];
+  if (st.custom) return st.custom.check();
+  const box = stepBox(id), ins = [...box.querySelectorAll('input.cell')];
+  let bad = 0, empty = 0;
+  ins.forEach(inp => {
+    const want = st.answer.values[+inp.dataset.i], got = inp.value.toUpperCase();
+    const ok = !!got && got.padStart(want.length, '0') === want;
+    if (!got) empty++; else if (!ok) bad++;
+    inp.classList.toggle('ok', ok); inp.classList.toggle('bad', !ok);
+  });
+  if (!bad && !empty) return markSolved(id);
+  const fb = box.querySelector('.fb');
+  fb.className = 'fb bad';
+  fb.textContent = bad ? `Неправильно: ${bad + empty} з ${ins.length}. Перевірте червоні клітинки.` : `Заповніть усі клітинки (порожніх: ${empty}).`;
+}
+function markSolved(id) { P.solved.add(id); P.revealed.delete(id); save(); afterChange(id); }
+function doReveal(id) {
+  if (!V.demo && !confirm('Показати відповідь? Цей крок не буде зараховано.')) return;
+  P.revealed.add(id); save(); afterChange(id);
+}
+function afterChange(id) {
+  renderStep(id);
+  const n = nextOf(id);
+  if (n) renderStep(n);
+  renderPipe(cur); renderTabs();
+}
+
+function renderPipe(tab) {
+  const el = document.getElementById('pipe');
+  if (!el || !ORDER[tab]) return;
+  const first = ORDER[tab].find(id => !isDone(id) && !isLocked(id));
+  el.innerHTML = ORDER[tab].map(id => {
+    const c = P.solved.has(id) ? 'ok' : P.revealed.has(id) ? 'rev' : id === first ? 'cur' : '';
+    return `<button class="chip ${c}" data-act="goto" data-id="${id}">${STEPS[id].num}. ${STEPS[id].short}</button>`;
+  }).join('');
+}
+
+// ===== TABS =====
+const pipe = () => '<div class="pipe" id="pipe"></div>';
+const RENDER = {
+  intro: () => `<h2>Навіщо агроному криптографія</h2>
+    <p class="lead">Сучасне господарство — це мережа: датчики вологості ґрунту, метеостанції, дрони-обприскувачі, GPS на техніці, контролери поливу, онлайн-продаж зерна.
+      Усе це передає дані по радіо (LoRaWAN, 4G, Wi-Fi), і перехопити їх може будь-хто поблизу. Шифри, які ви тут розберете, — AES і ChaCha20 —
+      захищають саме такі канали. Щоб зрозуміти, де вони стійкі, а де ламаються через помилки розробників, порахуйте їх власноруч.</p>
+    <h2>Як працювати</h2>
+    <ol class="howto">
+      <li><h3>Отримайте свій варіант</h3><p>Введіть прізвище та ім'я вгорі сторінки. З них генеруються ваші власні ключі та повідомлення, тож відповіді в кожного свої. Без ПІБ сторінка працює в демо-режимі на тестових векторах зі стандартів FIPS-197 і RFC 8439.</p></li>
+      <li><h3>Виконуйте кроки по черзі</h3><p>Кожен крок показує вхідні дані, операцію і поле для результату. Відповіді вводьте в hex (0–9, A–F). Курсор сам переходить до наступної клітинки, у матрицях — по стовпцях, так само, як байти записуються в стан. Можна вставити рядок hex цілком.</p></li>
+      <li><h3>Користуйтеся підказками</h3><p>Таблиці, формули і проміжні значення не штрафуються. «Показати відповідь» відкриває наступний крок, але поточний тоді не зараховується.</p></li>
+      <li><h3>Здайте код завершення</h3><p>Прогрес зберігається в цьому браузері. На вкладці «Результат» буде код. Надішліть його викладачу разом із ПІБ, написаним так само, як тут.</p></li>
+    </ol>
+    <h2>Що всередині</h2>
+    <ol class="toc">
+      <li><b>S-AES</b> — навчальна 16-бітна версія AES. Усі операції AES вручну за 15–20 хвилин.</li>
+      <li><b>AES-128</b> — справжній стандарт. Ви виконуєте початкове додавання ключа і перший раунд, решту 9 раундів обчислює сторінка.</li>
+      <li><b>ChaCha20</b> — потоковий шифр для пристроїв без апаратного AES. Quarter-round вручну, повний блок наочно.</li>
+      <li><b>Режими і атаки</b> — чому ECB видає форму зображення, як працюють CBC і CTR, як прочитати повідомлення при повторному nonce і як змінити команду обприскувачу без ключа.</li>
+    </ol>
+    <p class="muted">Знадобляться папір і калькулятор у режимі «Програміст» (для додавання 32-бітних чисел у ChaCha20).</p>
+    <p><button class="btn primary" data-act="tab" data-tab="saes">Почати з S-AES</button></p>`,
+
+  saes: () => `<h2>S-AES — спрощений AES</h2>
+    <p class="lead">S-AES — зменшена копія AES для навчання: блок і ключ по 16 біт, 2 раунди. Стан — матриця 2×2 з <b>ніблів</b> (нібл = 4 біти = одна hex-цифра).
+      16-бітне число записується в матрицю по стовпцях: <code>ABCD</code> → [A C / B D]. Операції ті самі, що в AES, тільки менші.</p>
+    <div class="schema"><span>⊕ K₀</span><i>→</i><span class="rnd"><span>NibbleSub</span><i>→</i><span>ShiftRows</span><i>→</i><span>MixColumns</span><i>→</i><span>⊕ K₁</span></span><i>→</i><span class="rnd"><span>NibbleSub</span><i>→</i><span>ShiftRows</span><i>→</i><span>⊕ K₂</span></span></div>
+    <p class="variant">${V.demo ? 'Демо-дані' : 'Ваш варіант'}: P = <code>${H4(V.saes.pt)}</code>, K = <code>${H4(V.saes.key)}</code></p>
+    ${pipe()}${slots('saes')}`,
+
+  aes: () => `<h2>AES-128</h2>
+    <p class="lead">AES (Rijndael, стандарт FIPS-197, 2001) — найпоширеніший блоковий шифр: блок 128 біт, ключ 128/192/256 біт. Стан — матриця 4×4 байти,
+      заповнена <b>по стовпцях</b> (байти 0–3 → стовпець 0). AES-128 має 10 раундів, перед першим виконується AddRoundKey з K₀.
+      Щоб не повторювати 16 однакових операцій, у деяких кроках ви рахуєте лише один стовпець.</p>
+    <div class="schema"><span>⊕ K₀</span><i>→</i><span class="rnd"><span>SubBytes</span><i>→</i><span>ShiftRows</span><i>→</i><span>MixColumns</span><i>→</i><span>⊕ Kᵣ</span></span><i>× 9 →</i><span class="rnd"><span>SubBytes</span><i>→</i><span>ShiftRows</span><i>→</i><span>⊕ K₁₀</span></span></div>
+    <p class="variant">${V.demo ? 'Демо-дані (FIPS-197, додаток B)' : 'Ваш варіант'}: P = <code>${grp(V.aes.pt)}</code>, K = <code>${grp(V.aes.key)}</code></p>
+    ${pipe()}${slots('aes')}`,
+
+  chacha: () => `<h2>ChaCha20 — потоковий шифр</h2>
+    <p class="lead">ChaCha20 (D. Bernstein, 2008; RFC 8439) генерує <b>keystream</b> блоками по 64 байти, а шифротекст = відкритий текст ⊕ keystream.
+      Внутрішній стан — 16 слів по 32 біти. Єдина «цеглинка» — quarter-round із трьох операцій: додавання, XOR, циклічний зсув.
+      Таблиць немає, тому ChaCha20 швидкий навіть на простих мікроконтролерах без апаратного AES (польові датчики, трекери техніки) і не має витоків через час доступу до пам'яті. Він захищає TLS 1.3, WireGuard і SSH.</p>
+    <p class="variant">${V.demo ? 'Демо-дані (RFC 8439, 2.1.1)' : 'Ваш варіант'}: a = <code>${H8(V.qr[0])}</code>, b = <code>${H8(V.qr[1])}</code>, c = <code>${H8(V.qr[2])}</code>, d = <code>${H8(V.qr[3])}</code></p>
+    ${pipe()}${slots('chacha', 0, 4)}
+    <section class="panel" id="ccblock">
+      <h3>Повний блок ChaCha20</h3>
+      <p>Стан 4×4 слова: 4 константи (ASCII «expand 32-byte k»), 8 слів ключа, лічильник блоку і 3 слова nonce.
+        20 раундів = 10 подвійних раундів. Кожен подвійний раунд — 4 quarter-round по стовпцях і 4 по діагоналях.
+        Наприкінці до результату додається початковий стан, інакше раунди можна було б обернути і відновити ключ.</p>
+      <div class="legend"><span style="--sw:var(--k-const)">константи</span><span style="--sw:var(--k-key)">ключ (256 біт)</span><span style="--sw:var(--k-ctr)">лічильник</span><span style="--sw:var(--k-nonce)">nonce (96 біт)</span></div>
+      <label style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0">Крок: <input type="range" id="ccr" min="0" max="11" value="0" style="flex:1 1 200px;max-width:360px"> <b id="ccrv"></b></label>
+      <div id="ccgrid"></div>
+      <div style="margin-top:14px">${block({ label: 'Keystream: 64 байти виходу (кожне слово записується little-endian)', values: hx(V.ccB.bytes), layout: ROW })}</div>
+      ${V.demo ? `<p class="${bytesHex(V.ccB.bytes.slice(0, 16)) === RFC_BLOCK16 ? 'ok-line' : 'bad-line'}">✓ Збігається з тестовим вектором RFC 8439, розділ 2.3.2.</p>` : ''}
+    </section>
+    ${slots('chacha', 4)}`,
+
+  modes: () => `<h2>Режими роботи і атаки</h2>
+    <p class="lead">Блоковий шифр шифрує рівно один блок (для AES — 16 байтів). <b>Режим роботи</b> визначає, як зашифрувати довге повідомлення.
+      Датчик надсилає показання, дрон отримує маршрут, контролер — команду поливу: усе це довші за 16 байтів потоки. Тут E_K — це AES-128 як «чорна скринька»: його обчислює сторінка, а ви працюєте з тим, що навколо нього.</p>
+    <section class="panel">
+      <h3>Чому не ECB</h3>
+      <p>У режимі ECB кожен блок шифрується окремо: <code>Cᵢ = E_K(Pᵢ)</code>. Однакові блоки відкритого тексту дають однакові блоки шифротексту.
+        Нижче — зображення соняшника 192×192 (1 байт яскравості на піксель), зашифроване AES-128 одним і тим самим ключем у трьох режимах.</p>
+      <div class="imgs">
+        <figure><canvas id="img0" width="192" height="192"></canvas><figcaption>Оригінал</figcaption></figure>
+        <figure><canvas id="img1" width="192" height="192"></canvas><figcaption>ECB: контури видно</figcaption></figure>
+        <figure><canvas id="img2" width="192" height="192"></canvas><figcaption>CBC: шум</figcaption></figure>
+        <figure><canvas id="img3" width="192" height="192"></canvas><figcaption>CTR: шум</figcaption></figure>
+      </div>
+      <p class="muted">ECB зберігає структуру даних. Карта врожайності чи NDVI-знімок поля, зашифровані в ECB, так само видали б межі ділянок. Тому ECB не використовують для даних, довших за один блок.</p>
+    </section>
+    ${pipe()}${slots('modes')}`,
+
+  result: () => {
+    const rows = Object.keys(TAB_NAMES).map(tab => {
+      const ids = ORDER[tab], n = ids.filter(id => P.solved.has(id)).length;
+      return `<div class="prow"><b>${TAB_NAMES[tab]}</b><div class="bar"><i style="width:${100 * n / ids.length}%"></i></div><span class="mono">${n}/${ids.length}</span>
+        <div class="pipe" style="grid-column:1/-1;margin:0">${ids.map(id => `<span class="chip ${P.solved.has(id) ? 'ok' : P.revealed.has(id) ? 'rev' : ''}">${STEPS[id].short}</span>`).join('')}</div></div>`;
+    }).join('');
+    const total = ALL_IDS.filter(id => P.solved.has(id)).length;
+    return `<h2>Результат</h2>
+      ${V.demo ? `<div class="panel"><p><b>Демо-режим.</b> Щоб отримати код завершення, введіть прізвище та ім'я вгорі сторінки і виконайте кроки свого варіанта.</p></div>` : `
+      <div class="panel">
+        <p>Студент: <b>${esc(P.name)}</b>. Зараховано кроків: <b>${total} з ${ALL_IDS.length}</b> (кроки з показаною відповіддю не враховуються).</p>
+        <div class="prog">${rows}</div>
+        <p style="margin-top:16px">Код завершення:</p>
+        <div class="code" id="code">${codeFor(P.name, P.solved)}</div>
+        <p><button class="btn" data-act="copy">Скопіювати</button> <span class="fb" id="copyfb"></span></p>
+        <p class="muted">Надішліть викладачу ПІБ (точно так, як введено вгорі) і цей код. Код змінюється з кожним виконаним кроком, тому здавайте його наприкінці.</p>
+      </div>`}
+      <details class="panel"><summary style="cursor:pointer"><b>Для викладача: перевірка коду</b></summary>
+        <div class="form"><input id="t-name" placeholder="ПІБ студента"><input id="t-code" placeholder="Код, напр. 1FFFFFF-A1B2C3" class="mono"><button class="btn primary" data-act="verify">Перевірити</button></div>
+        <div id="t-out"></div>
+        <p class="muted">Код — контрольна сума ПІБ і списку виконаних кроків. Він захищає від випадкових помилок і простого списування, але не від студента, який розбереться в JavaScript цієї сторінки.</p>
+      </details>`;
+  },
+};
+
+const POST = {
+  chacha() {
+    const r = document.getElementById('ccr'), g = document.getElementById('ccgrid'), lab = document.getElementById('ccrv');
+    const B = V.ccB, cls = i => i < 4 ? 'c-const' : i < 12 ? 'c-key' : i === 12 ? 'c-ctr' : 'c-nonce';
+    const show = () => {
+      const k = +r.value;
+      const st = k <= 10 ? B.snaps[k] : B.out;
+      lab.textContent = k === 0 ? 'початковий стан' : k <= 10 ? `після ${k} подвійн${k === 1 ? 'ого раунду' : 'их раундів'} (${2 * k} раундів)` : 'вихід = стан після 20 раундів + початковий стан';
+      g.innerHTML = cells(wx(st), { kind: 'm', rows: 4, cols: 4, rowMajor: true }, { cls });
+    };
+    r.addEventListener('input', show); show();
+  },
+  modes() { drawModes(); },
+};
+
+function drawModes() {
+  const W = 192, N = W * W, off = document.createElement('canvas');
+  off.width = off.height = W;
+  const c = off.getContext('2d');
+  const ell = (x, y, rx, ry, col, rot = 0) => { c.fillStyle = col; c.beginPath(); c.ellipse(x, y, rx, ry, rot, 0, 2 * Math.PI); c.fill(); };
+  c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, W);
+  c.fillStyle = '#3f8f3f'; c.fillRect(92, 104, 9, 88);
+  ell(66, 152, 24, 10, '#3f8f3f', -0.5); ell(126, 138, 24, 10, '#3f8f3f', 0.5);
+  for (let k = 0; k < 16; k++) { const a = k * Math.PI / 8; ell(96 + 44 * Math.cos(a), 72 + 44 * Math.sin(a), 9, 22, '#f2c230', a + Math.PI / 2); }
+  ell(96, 72, 30, 30, '#3a2a1a');
+  // яскравість кожного кольору потрапляє точно в один із рівнів
+  const src = c.getImageData(0, 0, W, W).data, levels = [40, 110, 191, 255];
+  const g = new Array(N);
+  for (let i = 0; i < N; i++) {
+    const y = 0.299 * src[4 * i] + 0.587 * src[4 * i + 1] + 0.114 * src[4 * i + 2];
+    g[i] = levels.reduce((a, b) => Math.abs(b - y) < Math.abs(a - y) ? b : a);
+  }
+  const rk = V.mrk, ecb = [], cbc = [];
+  let prev = V.m.iv;
+  for (let o = 0; o < N; o += 16) {
+    const blk = g.slice(o, o + 16);
+    ecb.push(...aesEnc(rk, blk));
+    prev = aesEnc(rk, xorB(blk, prev)); cbc.push(...prev);
+  }
+  const ks = ctrKeystream(rk, V.m.ctrNonce, N), ctr = xorB(g, ks);
+  [g, ecb, cbc, ctr].forEach((buf, k) => {
+    const cv = document.getElementById('img' + k);
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    if (k === 0) { ctx.drawImage(off, 0, 0); return; }
+    const im = ctx.createImageData(W, W);
+    for (let i = 0; i < N; i++) { im.data[4 * i] = im.data[4 * i + 1] = im.data[4 * i + 2] = buf[i]; im.data[4 * i + 3] = 255; }
+    ctx.putImageData(im, 0, 0);
+  });
+}
+
+function renderTabs() {
+  document.getElementById('tabs').innerHTML = TABS.map(t => {
+    const ids = ORDER[t.id];
+    const cnt = ids ? `<span class="tb">${ids.filter(id => P.solved.has(id)).length}/${ids.length}</span>` : '';
+    return `<button data-act="tab" data-tab="${t.id}" class="${t.id === cur ? 'active' : ''}">${t.t}${cnt}</button>`;
+  }).join('');
+}
+function renderTab(tab, scroll) {
+  if (!RENDER[tab]) tab = 'intro';
+  cur = tab;
+  renderTabs();
+  document.getElementById('main').innerHTML = RENDER[tab]();
+  (ORDER[tab] || []).forEach(renderStep);
+  renderPipe(tab);
+  if (POST[tab]) POST[tab]();
+  if (scroll) window.scrollTo({ top: 0 });
+}
+function renderBanner() {
+  document.getElementById('banner').innerHTML = V.demo
+    ? '<span class="pill">Демо-режим</span> <span class="muted">дані зі стандартів, прогрес не зберігається. Введіть ПІБ, щоб отримати свій варіант.</span>'
+    : `<span class="pill on">Варіант: ${esc(P.name)}</span> <span class="muted">прогрес зберігається в цьому браузері</span>`;
+}
+function setName(name) {
+  P.name = name.trim().replace(/\s+/g, ' ');
+  lsSet(LS + 'name', P.name);
+  document.getElementById('name').value = P.name;
+  loadProgress();
+  V = buildVariant(P.name);
+  buildSteps(V);
+  renderBanner();
+  renderTab(cur);
+}
+
+// ===== COMPLETION CODE =====
+function checksum(name, mh) { return (cyrb53(SALT + '|' + norm(name) + '|' + mh) % 16777216).toString(16).toUpperCase().padStart(6, '0'); }
+function codeFor(name, solved) {
+  let mask = 0;
+  ALL_IDS.forEach((id, i) => { if (solved.has(id)) mask += 2 ** i; });
+  const mh = mask.toString(16).toUpperCase().padStart(7, '0');
+  return mh + '-' + checksum(name, mh);
+}
+function verifyCode(name, code) {
+  const m = code.trim().toUpperCase().match(/^([0-9A-F]{7})-([0-9A-F]{6})$/);
+  if (!m || checksum(name, m[1]) !== m[2]) return null;
+  const mask = parseInt(m[1], 16);
+  return ALL_IDS.filter((_, i) => Math.floor(mask / 2 ** i) % 2 === 1);
+}
+
+// ===== EVENTS =====
+function cellInputs(el) { return [...el.closest('.step').querySelectorAll('input.cell')].sort((a, b) => a.dataset.i - b.dataset.i); }
+function fillFrom(inp, hex) {
+  const list = cellInputs(inp);
+  let k = list.indexOf(inp), last = inp;
+  while (hex.length && k < list.length) {
+    const t = list[k], n = +t.maxLength;
+    t.value = hex.slice(0, n); hex = hex.slice(n); t.classList.remove('ok', 'bad'); last = t; k++;
+  }
+  (list[k] || last).focus();
+}
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (!t.matches('input.cell')) return;
+  const v = t.value.replace(/[^0-9a-f]/gi, '').toUpperCase();
+  t.classList.remove('ok', 'bad');
+  if (v.length > t.maxLength) return fillFrom(t, v);
+  t.value = v;
+  if (v.length === +t.maxLength) { const l = cellInputs(t), n = l[l.indexOf(t) + 1]; if (n) n.focus(); }
+});
+document.addEventListener('paste', e => {
+  const t = e.target;
+  if (!t.matches || !t.matches('input.cell')) return;
+  const v = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9a-f]/gi, '').toUpperCase();
+  if (v.length > t.maxLength) { e.preventDefault(); fillFrom(t, v); }
+});
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if (!t.matches || !t.matches('input.cell')) return;
+  if (e.key === 'Enter') { e.preventDefault(); doCheck(t.closest('.step').dataset.id); }
+  else if (e.key === 'Backspace' && !t.value) { const l = cellInputs(t), p = l[l.indexOf(t) - 1]; if (p) { e.preventDefault(); p.focus(); } }
+});
+document.addEventListener('mouseover', e => {
+  const td = e.target.closest && e.target.closest('.tbl.hov td');
+  const tbl = e.target.closest && e.target.closest('.tbl.hov');
+  if (!tbl) return;
+  tbl.querySelectorAll('.hl,.hl2').forEach(x => x.classList.remove('hl', 'hl2'));
+  if (!td) return;
+  tbl.querySelectorAll(`th[data-r="${td.dataset.r}"],th[data-c="${td.dataset.c}"]`).forEach(x => x.classList.add('hl'));
+  td.classList.add('hl2');
+});
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const id = b.dataset.id || (b.closest('.step') && b.closest('.step').dataset.id);
+  switch (b.dataset.act) {
+    case 'tab': location.hash = b.dataset.tab; break;
+    case 'check': doCheck(id); break;
+    case 'reveal': doReveal(id); break;
+    case 'reset': renderStep(id); break;
+    case 'goto': stepBox(id).scrollIntoView({ behavior: 'smooth', block: 'start' }); break;
+    case 'copy': {
+      const fb = document.getElementById('copyfb'), txt = document.getElementById('code').textContent;
+      try { navigator.clipboard.writeText(txt).then(() => { fb.textContent = 'Скопійовано'; }, () => { fb.textContent = 'Виділіть код і скопіюйте вручну'; }); }
+      catch (err) { fb.textContent = 'Виділіть код і скопіюйте вручну'; }
+      break;
+    }
+    case 'verify': {
+      const n = document.getElementById('t-name').value, c = document.getElementById('t-code').value, out = document.getElementById('t-out');
+      const res = verifyCode(n, c);
+      if (!res) { out.innerHTML = '<p class="bad-line">✗ Код не відповідає цьому ПІБ. Перевірте написання імені та коду.</p>'; break; }
+      out.innerHTML = `<p class="ok-line">✓ Код дійсний: зараховано ${res.length} з ${ALL_IDS.length} кроків.</p>` +
+        Object.keys(TAB_NAMES).map(tab => `<p><b>${TAB_NAMES[tab]}</b> (${ORDER[tab].filter(id => res.includes(id)).length}/${ORDER[tab].length}): ` +
+          ORDER[tab].map(id => `<span class="chip ${res.includes(id) ? 'ok' : ''}">${STEPS[id].short}</span>`).join(' ') + '</p>').join('');
+      break;
+    }
+  }
+});
+window.addEventListener('hashchange', () => renderTab(location.hash.slice(1), true));
+document.getElementById('who').addEventListener('submit', e => {
+  e.preventDefault();
+  const n = document.getElementById('name').value;
+  if (norm(n).length < 3) { alert('Введіть прізвище та ім\'я.'); return; }
+  setName(n);
+});
+document.getElementById('demo-btn').addEventListener('click', () => setName(''));
+
+// ===== HERO: телеметрія поля до і після AES-CTR =====
+function initHero() {
+  const plot = document.getElementById('plot'), cap = document.getElementById('plot-cap'), btn = document.getElementById('plot-btn');
+  const R = makeRng('hero-field');
+  const pt = strBytes(HERO_MSG.repeat(2).slice(0, 128));
+  const ct = xorB(pt, ctrKeystream(aesRK(R.bytes(16)), R.bytes(12), 128));
+  const tone = b => `hsl(${48 + b / 255 * 92} ${42 + (b % 7) * 2}% ${26 + b / 255 * 36}%)`;
+  plot.innerHTML = pt.map(() => '<span></span>').join('');
+  const spans = [...plot.children];
+  const paint = (i, enc) => { const b = enc ? ct[i] : pt[i]; spans[i].style.backgroundColor = tone(b); spans[i].style.color = b > 150 ? 'rgba(20,30,15,.85)' : 'rgba(255,255,255,.85)'; spans[i].textContent = enc ? H2(b) : String.fromCharCode(b); };
+  let enc = false;
+  const label = () => {
+    cap.textContent = enc ? 'Шифротекст AES-CTR: структура зникла' : 'Телеметрія ґрунтового датчика, 128 байтів';
+    btn.textContent = enc ? 'Показати відкритий текст' : 'Зашифрувати';
+  };
+  const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // прохід «комбайна»: стовпець за стовпцем
+  const sweep = to => {
+    enc = to; label(); btn.disabled = true;
+    for (let col = 0; col < 16; col++) {
+      setTimeout(() => {
+        for (let r = 0; r < 8; r++) paint(r * 16 + col, to);
+        if (col === 15) btn.disabled = false;
+      }, still ? 0 : col * 70);
+    }
+  };
+  spans.forEach((_, i) => paint(i, false)); label();
+  btn.addEventListener('click', () => sweep(!enc));
+  setTimeout(() => sweep(true), still ? 0 : 700);
+}
+initHero();
+
+cur = location.hash.slice(1) || 'intro';
+setName(lsGet(LS + 'name') || '');
+</script>
+</body>
+</html>
